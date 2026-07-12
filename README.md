@@ -34,6 +34,34 @@ Clean Eye는 클라이언트와 서버 간의 비동기 통신을 통해 실시�
    * **Image Server:** YOLOv8 모델을 통해 전송된 이미지의 유해성을 실시간으로 분석합니다.
 4. **결과 반환 및 필터링 (Server → Client):** 분석 결과를 바탕으로 클라이언트가 웹페이지의 HTML 코드를 직접 수정하여 유해 콘텐츠를 가리거나 순화된 텍스트로 대체합니다.
 
+```mermaid
+flowchart LR
+    DOM["Web Page (DOM)"]
+    Client["Chrome Extension (Frontend)"]
+
+    subgraph "Clean Eye Backend Systems"
+        direction TB
+        
+        subgraph TextServer["Text Analysis Pipeline (Spring Boot)"]
+            direction LR
+            API["REST API"] --> DB[("DB (PostgreSQL)")]
+            API --> Cache{"Caffeine Cache"}
+            API --> AI["Gemini AI (Flash-Lite)"]
+        end
+        
+        subgraph ImageServer["Image Analysis (Python)"]
+            ImgAPI["REST API"] --> YOLO["YOLOv8 Model"]
+        end
+    end
+
+    Client -- "1. Text Request (JSON)" --> API
+    Client -- "2. Image Request (JSON)" --> ImgAPI
+    
+    API -- "3. Purified Text (JSON)" --> Client
+    ImgAPI -- "4. Masking Info (JSON)" --> Client
+    
+    Client -. "5. DOM Update & Masking" .-> DOM
+```
 ---
 
 ## 🎯 My Key Contributions (유찬영)
@@ -68,6 +96,18 @@ Clean Eye는 클라이언트와 서버 간의 비동기 통신을 통해 실시�
 
 ---
 
+## 💡 회고 및 배운 점 (Retrospective)
+
+**"비용 투입(과금)이 아닌, 아키텍처 설계와 목적에 맞는 기술 선택을 통한 문제 해결"**
+
+대량의 API 요청으로 인한 지연 및 429 에러 문제를 직면했을 때, 단순히 고비용의 AWS 서버로 스케일업(Scale-up)하거나 API 요금제를 업그레이드하는 쉬운 방법 대신 '소프트웨어 설계'로 문제를 해결하고자 했습니다. 
+
+쿼리를 최적화하고 배칭(Batching)과 로컬 캐싱(Caching)을 도입함으로써 외부 API 호출 자체를 대폭 줄여 외부 의존도를 낮췄습니다. 또한 무조건 무겁고 성능이 좋은 최신 AI 모델을 맹목적으로 고집하기보다, '텍스트 필터링 및 단어 순화'라는 서비스 목적에 가장 부합하면서도 응답이 빠른 경량화 모델(Gemini Flash-Lite)을 취사선택했습니다. 
+
+이를 통해 시스템의 가용성은 높이면서도 운영 비용은 획기적으로 절감할 수 있었고, 주어진 제약 환경을 논리적인 엔지니어링 역량으로 극복해 내는 것이 백엔드 개발자의 진정한 역할임을 깨달았습니다.
+
+---
+
 ## 🛠 기술 스택 (Tech Stack)
 
 ### **Backend (Text Analysis)**
@@ -99,6 +139,10 @@ Clean Eye는 클라이언트와 서버 간의 비동기 통신을 통해 실시�
 | **백엔드 아키텍처 및 성능 최적화 (텍스트)** | 60202592 | **유찬영** |
 | **백엔드 (이미지 서버)** | 60202229 | 이경주 |
 | **프론트엔드 (UI 및 데이터 추출)** | 60202241 | 이중화 |
+
+
+### 🤝 Collaboration & Communication
+크롬 확장 프로그램(프론트엔드)과 두 개의 독립된 분석 서버(텍스트/이미지 백엔드) 간의 원활한 연동을 위해, 정기적인 대면 및 메신저 회의를 통해 표준화된 JSON API 응답 규격을 정의했습니다. 클라이언트가 텍스트와 이미지 분석 요청을 각 서버로 독립적으로 전송하고 응답받는 직관적인 구조를 설계하여, 불필요한 서버 간 결합도를 낮추고 프론트엔드 렌더링 속도를 확보했습니다.
 
 ---
 
