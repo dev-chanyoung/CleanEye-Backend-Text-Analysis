@@ -119,9 +119,71 @@ public class GeminiAnalysisCacheServiceImpl implements GeminiAnalysisCacheServic
         }
     }
 
+    /**
+     * [복원] 캡스톤 전시회 버전의 순화 로직 포팅.
+     * 유해 단어를 비공격적인 표현 1개로 순화해서 반환한다. 같은 텍스트는 캐시(refinedTextResults)로
+     * 재호출을 막는다.
+     */
     @Override
+    @Cacheable(value = "refinedTextResults", key = "#text")
     public String getRefinedText(String text) {
-        // (필요 시 기존 순화 로직 구현)
-        return text;
+        log.info("[API 순화 요청] 캐시 미스 - Gemini API 순화 호출 수행: '{}'", text);
+        String processedText = text.trim();
+        try {
+            String prompt = String.format(
+                    "다음 텍스트를 유해하지 않거나 부드럽거나 비공격적인 표현으로 순화해서 순화된 단어 1개로만 대답해: \"%s\"",
+                    processedText
+            );
+
+            Map<String, Object> response = executeGeminiRequest(prompt);
+            String refinedText = parseRefinedTextFromResult(response, processedText);
+
+            log.info("[API 순화 결과] 원본: '{}' -> 순화: '{}'", processedText, refinedText);
+            return refinedText;
+        } catch (Exception e) {
+            log.error("텍스트 '{}' 순화 중 Gemini API 호출 오류 발생: {}", processedText, e.getMessage());
+            return "순화불가";
+        }
+    }
+
+    // Gemini 응답에서 순화된 텍스트를 파싱하고, 무의미한 응답(원문 그대로/너무 길거나 여러 줄 등)은
+    // 클라이언트와 약속된 "순화불가" 문자열로 정리하는 헬퍼
+    @SuppressWarnings("unchecked")
+    private String parseRefinedTextFromResult(Map<String, Object> response, String originalText) {
+        String rawRefinedText;
+        try {
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
+            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+            rawRefinedText = parts.get(0).get("text").toString().trim();
+        } catch (Exception e) {
+            log.error("Gemini 순화 응답 파싱 중 오류 발생: {}", e.getMessage());
+            return "순화불가";
+        }
+
+        if ("대체어없음".equalsIgnoreCase(rawRefinedText) ||
+                "순화불가".equalsIgnoreCase(rawRefinedText) ||
+                rawRefinedText.isEmpty()) {
+            log.warn("Gemini가 텍스트 '{}' 순화에 대해 명시적으로 실패/대체어 없음을 응답했습니다: {}", originalText, rawRefinedText);
+            return "순화불가";
+        }
+
+        // 마크다운 강조 표시(**굵게**, *기울임*) 제거
+        String cleanedRefinedText = rawRefinedText
+                .replaceAll("(?s)\\*\\*([^*]+)\\*\\*", "$1")
+                .replaceAll("(?s)\\*([^*]+)\\*", "$1")
+                .trim();
+
+        if (originalText.equalsIgnoreCase(cleanedRefinedText)) {
+            log.warn("Gemini가 텍스트 '{}' 순화 시 원본을 그대로 반환했습니다. '순화불가'로 처리합니다.", originalText);
+            return "순화불가";
+        }
+
+        if (cleanedRefinedText.split("\\s+").length > 5 || cleanedRefinedText.contains("\n")) {
+            log.warn("순화된 텍스트 '{}'가 너무 길거나 여러 줄입니다. '순화불가'로 처리합니다.", cleanedRefinedText);
+            return "순화불가";
+        }
+
+        return cleanedRefinedText;
     }
 }
