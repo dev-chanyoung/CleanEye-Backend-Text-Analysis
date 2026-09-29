@@ -72,7 +72,10 @@ class GeminiAnalysisCacheServiceImplTest {
         List<HarmfulnessResult> results = serviceReturning("분석할 수 없습니다").analyzeWordsInBatch(List.of("a", "b"));
 
         assertThat(results).extracting(HarmfulnessResult::getInputText).containsExactly("a", "b");
-        assertThat(results).allSatisfy(r -> assertThat(r.getScore()).isZero());
+        assertThat(results).allSatisfy(r -> {
+            assertThat(r.getScore()).isZero();
+            assertThat(r.isAnalysisFailed()).isTrue();
+        });
     }
 
     @Test

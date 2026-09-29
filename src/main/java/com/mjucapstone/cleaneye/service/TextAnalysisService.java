@@ -105,6 +105,15 @@ public class TextAnalysisService {
 
             // 6. AI 분석 결과 메타데이터 주입 + DB 아카이빙 + 캐시 적재
             aiTotalResults.forEach(r -> {
+                // AI 분석이 실패한 단어는 0점(무해)으로만 응답하고, DB·캐시에는 남기지 않아 다음 요청에서 다시 분석한다
+                if (r.isAnalysisFailed()) {
+                    r.setType(request.getType());
+                    r.setRequestUrl(request.getRequestUrl());
+                    r.setReason("AI 분석 실패 - 저장하지 않음");
+                    finalResults.add(r);
+                    return;
+                }
+
                 updateMetaData(r, thresholdScore, request);
                 finalResults.add(r);
 

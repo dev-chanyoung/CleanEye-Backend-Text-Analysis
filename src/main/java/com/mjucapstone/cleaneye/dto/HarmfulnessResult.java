@@ -22,4 +22,5 @@ public class HarmfulnessResult {
     private String reason;               // 유해성 판단 근거 (DB 매칭 또는 AI 분석 사유)
     private Integer type;                // 요청된 분석 타입
     private String requestUrl;           // 분석 요청이 발생한 출처 URL
+    private boolean analysisFailed;      // AI 분석 자체가 실패해 점수가 실제 판정이 아닌 경우 (저장·캐시 제외 대상)
 }

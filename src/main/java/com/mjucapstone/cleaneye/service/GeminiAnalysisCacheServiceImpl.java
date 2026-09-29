@@ -52,7 +52,7 @@ public class GeminiAnalysisCacheServiceImpl implements GeminiAnalysisCacheServic
         } catch (Exception e) {
             log.error("[API Error] Batch 분석 실패: {}", e.getMessage());
             return words.stream()
-                    .map(w -> HarmfulnessResult.builder().inputText(w).score(0.0).build())
+                    .map(w -> HarmfulnessResult.builder().inputText(w).score(0.0).analysisFailed(true).build())
                     .collect(Collectors.toList());
         }
     }

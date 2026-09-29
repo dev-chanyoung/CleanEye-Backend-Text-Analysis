@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -114,6 +115,24 @@ class TextAnalysisServiceTest {
         verify(geminiService, times(3)).analyzeWordsInBatch(chunks.capture());
         assertThat(chunks.getAllValues()).extracting(List::size).containsExactlyInAnyOrder(50, 50, 20);
         assertThat(results).hasSize(120);
+    }
+
+    @Test
+    @DisplayName("AI 분석이 실패한 단어는 무해로 응답하되 DB와 캐시에 남기지 않아 다음 요청에서 다시 분석한다")
+    void failedAnalysisIsNotPersistedOrCached() {
+        when(geminiService.analyzeWordsInBatch(anyList())).thenAnswer(inv -> ((List<String>) inv.getArgument(0)).stream()
+                .map(w -> HarmfulnessResult.builder().inputText(w).score(0.0).analysisFailed(true).build())
+                .collect(Collectors.toList()));
+
+        List<HarmfulnessResult> first = service.analyze(request(List.of("실패단어"), 50.0, 1));
+
+        assertThat(first).singleElement().satisfies(r -> assertThat(r.isConsideredHarmful()).isFalse());
+        verify(reportedExpressionService, never()).saveOrUpdate(anyString(), any());
+        assertThat(cacheManager.getCache("geminiResults").get("실패단어")).isNull();
+
+        service.analyze(request(List.of("실패단어"), 50.0, 1));
+
+        verify(geminiService, times(2)).analyzeWordsInBatch(anyList());
     }
 
     @Test
