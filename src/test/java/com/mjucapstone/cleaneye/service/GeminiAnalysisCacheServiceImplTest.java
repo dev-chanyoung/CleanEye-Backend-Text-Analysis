@@ -78,12 +78,6 @@ class GeminiAnalysisCacheServiceImplTest {
         });
     }
 
-    @Test
-    @DisplayName("단건 분석은 응답 텍스트에서 숫자만 뽑아 점수로 쓴다")
-    void parsesSingleScore() {
-        assertThat(serviceReturning("Score: 75").callGeminiAndParse("바보").getScore()).isEqualTo(75.0);
-    }
-
     /**
      * Gemini generateContent 응답 형식(candidates[0].content.parts[0].text)으로 감싼 JSON 본문을 만듭니다.
      */

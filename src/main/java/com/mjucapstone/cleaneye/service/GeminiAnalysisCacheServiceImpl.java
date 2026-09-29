@@ -57,32 +57,6 @@ public class GeminiAnalysisCacheServiceImpl implements GeminiAnalysisCacheServic
         }
     }
 
-    /**
-     * [After Version] Caching - 단건 분석 시 캐시 적용
-     */
-    @Override
-    @Cacheable(value = "geminiResults", key = "#text")
-    public HarmfulnessResult callGeminiAndParse(String text) {
-        log.info("[API 호출] 캐시 미스 - 단건 직접 호출: '{}'", text);
-        try {
-            String prompt = String.format("Analyze the harmfulness of the word '%s' (0-100). Respond with just the number.", text);
-            Map<String, Object> response = executeGeminiRequest(prompt);
-
-            // 기존 단건 파싱 로직 활용
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-            String scoreStr = parts.get(0).get("text").toString().replaceAll("[^0-9.]", "").trim();
-
-            return HarmfulnessResult.builder()
-                    .inputText(text)
-                    .score(scoreStr.isEmpty() ? 0.0 : Double.parseDouble(scoreStr))
-                    .build();
-        } catch (Exception e) {
-            return HarmfulnessResult.builder().inputText(text).score(0.0).build();
-        }
-    }
-
     // 실제 Gemini API와 통신하는 공통 메서드
     private Map<String, Object> executeGeminiRequest(String prompt) {
         return webClient.post()

@@ -78,15 +78,6 @@ class GeminiAnalysisCachingTest {
     }
 
     @Test
-    @DisplayName("같은 텍스트의 단건 점수 분석은 두 번째부터 캐시에서 응답한다")
-    void singleScoreIsCached() {
-        service.callGeminiAndParse("바보");
-        service.callGeminiAndParse("바보");
-
-        assertThat(GEMINI_CALLS).hasValue(1);
-    }
-
-    @Test
     @DisplayName("배치 분석은 캐시 대상이 아니므로 매번 호출한다")
     void batchIsNotCached() {
         service.analyzeWordsInBatch(List.of("바보"));

@@ -11,15 +11,6 @@ import java.util.List;
 public interface GeminiAnalysisCacheService {
 
     /**
-     * 입력 텍스트의 유해성 점수를 분석하고 결과를 반환합니다.
-     * 구현체에서 @Cacheable을 적용하여 불필요한 API 호출 비용을 최소화해야 합니다.
-     *
-     * @param text 분석할 대상 문자열
-     * @return 유해성 수치와 분석 근거를 포함한 {@link HarmfulnessResult}
-     */
-    HarmfulnessResult callGeminiAndParse(String text);
-
-    /**
      * 유해 표현이 포함된 텍스트를 비유해적인 부드러운 표현으로 재구성(Refining)합니다.
      *
      * @param originalText 순화 처리가 필요한 원본 문자열
