@@ -1,1 +1,2 @@
+// 프로젝트 이름. 빌드 결과물(jar) 이름에 쓰인다. (예: CleanEye-Backend-Text-Analysis-0.0.1-SNAPSHOT.jar)
 rootProject.name = 'CleanEye-Backend-Text-Analysis'
